@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Yiisoft\Telemetry\Collector\Collector;
+namespace TTM\Telemetry\Collector\Collector;
 
 trait CollectorTrait
 {

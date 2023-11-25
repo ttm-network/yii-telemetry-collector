@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-use Yiisoft\Telemetry\Collector\TelemetryCollector;
+use TTM\Telemetry\Collector\TelemetryCollector;
 
 return [
     TelemetryCollector::class => [

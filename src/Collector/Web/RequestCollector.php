@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Yiisoft\Yii\Debug\Collector\Web;
+namespace TTM\Telemetry\Collector\Collector\Web;
 
 use GuzzleHttp\Psr7\Message;
 use Psr\Http\Message\ResponseInterface;
