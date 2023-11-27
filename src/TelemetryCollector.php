@@ -12,7 +12,7 @@ final class TelemetryCollector
         /**
          * @var CollectorInterface[]
          */
-        private array $collectors
+        private readonly array $collectors = []
     ) {
         register_shutdown_function([$this, 'shutdown']);
     }

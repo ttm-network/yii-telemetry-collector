@@ -4,6 +4,9 @@ declare(strict_types=1);
 
 namespace TTM\Telemetry\Collector\Collector\Web;
 
+use ReflectionClass;
+use TTM\Telemetry\Collector\Collector\CollectorTrait;
+use TTM\Telemetry\TracerInterface;
 use Yiisoft\Middleware\Dispatcher\Event\AfterMiddleware;
 use Yiisoft\Middleware\Dispatcher\Event\BeforeMiddleware;
 
@@ -14,7 +17,7 @@ final class MiddlewareCollector
     private array $beforeStack = [];
     private array $afterStack = [];
 
-    public function __construct()
+    public function __construct(private readonly TracerInterface $tracer)
     {
     }
 
@@ -37,6 +40,7 @@ final class MiddlewareCollector
         } else {
             $name = $event->getMiddleware()::class;
         }
+
         if ($event instanceof BeforeMiddleware) {
             $this->beforeStack[] = [
                 'name' => $name,
@@ -52,25 +56,15 @@ final class MiddlewareCollector
                 'response' => $event->getResponse(),
             ];
         }
-        $this->timelineCollector->collect($this, spl_object_id($event));
+
+
+        die();
     }
 
     private function reset(): void
     {
         $this->beforeStack = [];
         $this->afterStack = [];
-    }
-
-    public function getSummary(): array
-    {
-        if (!$this->isActive()) {
-            return [];
-        }
-        return [
-            'middleware' => [
-                'total' => ($total = count($this->beforeStack)) > 0 ? $total - 1 : 0, // Remove action handler
-            ],
-        ];
     }
 
     private function getActionHandler(array $beforeAction, array $afterAction): array

@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace TTM\Telemetry\Collector\Collector;
+namespace TTM\Telemetry\Collector;
 
 /**
  * Trace data collector responsibility is to collect data during application lifecycle.
