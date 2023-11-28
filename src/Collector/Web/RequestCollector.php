@@ -44,7 +44,7 @@ final class RequestCollector
                     'query' => $request->getUri()->getQuery(),
                     'isAjax' => strtolower($request->getHeaderLine('X-Requested-With')) === 'xmlhttprequest',
                     'userIp' => $request->getServerParams()['REMOTE_ADDR'] ?? 'unknown',
-                ]
+                ],scoped: true
             );
         } elseif ($event instanceof AfterRequest) {
             if (!$this->activeSpan) {

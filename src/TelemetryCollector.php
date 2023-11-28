@@ -15,7 +15,7 @@ final class TelemetryCollector
          * @var CollectorInterface[]
          */
         private readonly array $collectors,
-        private readonly TracerInterface $tracer
+        private readonly TracerInterface $tracer,
     ) {
         register_shutdown_function([$this, 'shutdown']);
     }
@@ -39,7 +39,7 @@ final class TelemetryCollector
             $collector->shutdown();
         }
 
-        $this->active = false;
         $this->tracer->endAllSpans();
+        $this->active = false;
     }
 }
