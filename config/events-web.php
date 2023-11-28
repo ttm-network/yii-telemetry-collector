@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 use TTM\Telemetry\Collector\Collector\Web\MiddlewareCollector;
+use TTM\Telemetry\Collector\Collector\Web\RequestCollector;
 use TTM\Telemetry\Collector\TelemetryCollector;
 use Yiisoft\ErrorHandler\Event\ApplicationError;
 use Yiisoft\Middleware\Dispatcher\Event\AfterMiddleware;
@@ -19,24 +20,22 @@ if (!(bool)($params['yiisoft/yii-telemetry-collector']['enabled'] ?? false)) {
 
 return [
     ApplicationStartup::class => [
+        [TelemetryCollector::class, 'startup'],
         //[WebAppInfoCollector::class, 'collect'],
     ],
     ApplicationShutdown::class => [
         //[WebAppInfoCollector::class, 'collect'],
+        [TelemetryCollector::class, 'shutdown'],
     ],
     BeforeRequest::class => [
-        [TelemetryCollector::class, 'startup'],
-//        [WebAppInfoCollector::class, 'collect'],
-//        [RequestCollector::class, 'collect'],
+        [RequestCollector::class, 'collect'],
     ],
     AfterRequest::class => [
-//        [WebAppInfoCollector::class, 'collect'],
-//        [RequestCollector::class, 'collect'],
+        [RequestCollector::class, 'collect'],
     ],
     AfterEmit::class => [
 //        [ProfilerInterface::class, 'flush'],
 //        [WebAppInfoCollector::class, 'collect'],
-        [TelemetryCollector::class, 'shutdown'],
     ],
     BeforeMiddleware::class => [
         [MiddlewareCollector::class, 'collect'],

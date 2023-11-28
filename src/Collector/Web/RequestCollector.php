@@ -4,66 +4,27 @@ declare(strict_types=1);
 
 namespace TTM\Telemetry\Collector\Collector\Web;
 
-use GuzzleHttp\Psr7\Message;
-use Psr\Http\Message\ResponseInterface;
 use Psr\Http\Message\ServerRequestInterface;
-use Yiisoft\Yii\Debug\Collector\CollectorTrait;
-use Yiisoft\Yii\Debug\Collector\SummaryCollectorInterface;
-use Yiisoft\Yii\Debug\Collector\TimelineCollector;
+use Psr\Log\LoggerInterface;
+use TTM\Telemetry\Collector\Collector\CollectorTrait;
+use TTM\Telemetry\SpanInterface;
+use TTM\Telemetry\TracerInterface;
 use Yiisoft\Yii\Http\Event\AfterRequest;
 use Yiisoft\Yii\Http\Event\BeforeRequest;
 
 use function is_object;
 
-final class RequestCollector implements SummaryCollectorInterface
+final class RequestCollector
 {
     use CollectorTrait;
 
-    private string $requestUrl = '';
-    private string $requestPath = '';
-    private string $requestQuery = '';
-    private string $requestMethod = '';
-    private bool $requestIsAjax = false;
-    private ?string $userIp = null;
-    private int $responseStatusCode = 200;
+    private ?SpanInterface $activeSpan = null;
     private ?ServerRequestInterface $request = null;
-    private ?ResponseInterface $response = null;
 
-    public function __construct(private TimelineCollector $timelineCollector)
-    {
-    }
-
-    public function getCollected(): array
-    {
-        if (!$this->isActive()) {
-            return [];
-        }
-
-        $requestRaw = null;
-        if ($this->request instanceof ServerRequestInterface) {
-            $requestRaw = Message::toString($this->request);
-            Message::rewindBody($this->request);
-        }
-
-        $responseRaw = null;
-        if ($this->response instanceof ResponseInterface) {
-            $responseRaw = Message::toString($this->response);
-            Message::rewindBody($this->response);
-        }
-
-        return [
-            'requestUrl' => $this->requestUrl,
-            'requestPath' => $this->requestPath,
-            'requestQuery' => $this->requestQuery,
-            'requestMethod' => $this->requestMethod,
-            'requestIsAjax' => $this->requestIsAjax,
-            'userIp' => $this->userIp,
-            'responseStatusCode' => $this->responseStatusCode,
-            'request' => $this->request,
-            'requestRaw' => $requestRaw,
-            'response' => $this->response,
-            'responseRaw' => $responseRaw,
-        ];
+    public function __construct(
+        private readonly TracerInterface $tracer,
+        private readonly LoggerInterface $logger
+    ) {
     }
 
     public function collect(object $event): void
@@ -76,50 +37,27 @@ final class RequestCollector implements SummaryCollectorInterface
             $request = $event->getRequest();
 
             $this->request = $request;
-            $this->requestUrl = (string) $request->getUri();
-            $this->requestPath = $request->getUri()->getPath();
-            $this->requestQuery = $request->getUri()->getQuery();
-            $this->requestMethod = $request->getMethod();
-            $this->requestIsAjax = strtolower($request->getHeaderLine('X-Requested-With')) === 'xmlhttprequest';
-            $this->userIp = $request->getServerParams()['REMOTE_ADDR'] ?? null;
-        }
-        if ($event instanceof AfterRequest) {
-            $response = $event->getResponse();
+            $this->activeSpan = $this->tracer->startSpan(
+                sprintf('%s %s', $request->getMethod(), $request->getUri()->getPath()),
+                attributes: [
+                    'url' => (string)$request->getUri(),
+                    'query' => $request->getUri()->getQuery(),
+                    'isAjax' => strtolower($request->getHeaderLine('X-Requested-With')) === 'xmlhttprequest',
+                    'userIp' => $request->getServerParams()['REMOTE_ADDR'] ?? 'unknown',
+                ]
+            );
+        } elseif ($event instanceof AfterRequest) {
+            if (!$this->activeSpan) {
+                $this->logger->warning('Failed to close span for request. No active spans.');
+                return;
+            }
 
-            $this->response = $response;
-            $this->responseStatusCode = $response !== null ? $response->getStatusCode() : 500;
+            $this->tracer->endSpan($this->activeSpan);
         }
-        $this->timelineCollector->collect($this, spl_object_id($event));
-    }
-
-    public function getSummary(): array
-    {
-        if (!$this->isActive()) {
-            return [];
-        }
-        return [
-            'request' => [
-                'url' => $this->requestUrl,
-                'path' => $this->requestPath,
-                'query' => $this->requestQuery,
-                'method' => $this->requestMethod,
-                'isAjax' => $this->requestIsAjax,
-                'userIp' => $this->userIp,
-            ],
-            'response' => [
-                'statusCode' => $this->responseStatusCode,
-            ],
-        ];
     }
 
     private function reset(): void
     {
-        $this->request = null;
-        $this->response = null;
-        $this->requestUrl = '';
-        $this->requestMethod = '';
-        $this->requestIsAjax = false;
-        $this->userIp = null;
-        $this->responseStatusCode = 200;
+        $this->activeSpan = null;
     }
 }

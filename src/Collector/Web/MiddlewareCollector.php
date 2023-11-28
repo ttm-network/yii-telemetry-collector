@@ -14,8 +14,7 @@ final class MiddlewareCollector
 {
     use CollectorTrait;
 
-    private array $beforeStack = [];
-    private array $afterStack = [];
+    private array $spans = [];
 
     public function __construct(private readonly TracerInterface $tracer)
     {
@@ -41,41 +40,19 @@ final class MiddlewareCollector
             $name = $event->getMiddleware()::class;
         }
 
+        $middlewareId = spl_object_id($event->getMiddleware());
+
         if ($event instanceof BeforeMiddleware) {
-            $this->beforeStack[] = [
-                'name' => $name,
-                'time' => microtime(true),
-                'memory' => memory_get_usage(),
-                'request' => $event->getRequest(),
-            ];
+            $this->spans[$middlewareId] = $this->tracer->startSpan(
+                name: sprintf('middleware (%s)', $name)
+            );
         } else {
-            $this->afterStack[] = [
-                'name' => $name,
-                'time' => microtime(true),
-                'memory' => memory_get_usage(),
-                'response' => $event->getResponse(),
-            ];
+            $this->tracer->endSpan($this->spans[$middlewareId]);
         }
-
-
-        die();
     }
 
     private function reset(): void
     {
-        $this->beforeStack = [];
-        $this->afterStack = [];
-    }
-
-    private function getActionHandler(array $beforeAction, array $afterAction): array
-    {
-        return [
-            'name' => $beforeAction['name'],
-            'startTime' => $beforeAction['time'],
-            'request' => $beforeAction['request'],
-            'response' => $afterAction['response'],
-            'endTime' => $afterAction['time'],
-            'memory' => $afterAction['memory'],
-        ];
+        $this->spans = [];
     }
 }

@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace TTM\Telemetry\Collector;
 
+use TTM\Telemetry\TracerInterface;
+
 final class TelemetryCollector
 {
     private bool $active = false;
@@ -12,7 +14,8 @@ final class TelemetryCollector
         /**
          * @var CollectorInterface[]
          */
-        private readonly array $collectors = []
+        private readonly array $collectors,
+        private readonly TracerInterface $tracer
     ) {
         register_shutdown_function([$this, 'shutdown']);
     }
@@ -35,6 +38,8 @@ final class TelemetryCollector
         foreach ($this->collectors as $collector) {
             $collector->shutdown();
         }
+
         $this->active = false;
+        $this->tracer->endAllSpans();
     }
 }
