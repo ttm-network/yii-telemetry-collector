@@ -38,10 +38,7 @@ final class MiddlewareCollector
         } else {
             /** @var SpanInterface $span */
             [$span, $info] = array_pop($this->stack);
-            $span->setAttribute(
-                'memory_usage',
-                $this->formatMemoryUsage(memory_get_usage() - $info['memory'])
-            );
+            $span->setAttribute('php.memory_usage', memory_get_usage() - $info['memory']);
             $this->tracer->endSpan($span);
         }
     }
@@ -62,18 +59,5 @@ final class MiddlewareCollector
         }
 
         return $middleware::class;
-    }
-
-    private function formatMemoryUsage($bytes, $precision = 2): string
-    {
-        $units = ['B', 'KB', 'MB', 'GB', 'TB'];
-
-        $bytes = max($bytes, 0);
-        $pow = floor(($bytes ? log($bytes) : 0) / log(1024));
-        $pow = min($pow, count($units) - 1);
-
-        $bytes /= (1 << (10 * $pow));
-
-        return round($bytes, $precision) . ' ' . $units[$pow];
     }
 }

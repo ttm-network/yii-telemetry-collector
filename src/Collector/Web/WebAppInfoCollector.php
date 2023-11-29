@@ -10,6 +10,7 @@ use Psr\Log\LoggerInterface;
 use TTM\Telemetry\Collector\Collector\CollectorTrait;
 use TTM\Telemetry\SpanInterface;
 use TTM\Telemetry\TracerInterface;
+use Yiisoft\ErrorHandler\Event\ApplicationError;
 use Yiisoft\Yii\Http\Event\AfterEmit;
 use Yiisoft\Yii\Http\Event\AfterRequest;
 use Yiisoft\Yii\Http\Event\ApplicationShutdown;
@@ -41,16 +42,14 @@ final class WebAppInfoCollector
             $event instanceof BeforeRequest => $this->request = $event->getRequest(),
             $event instanceof AfterRequest => $this->handleAfterRequest($event),
             $event instanceof AfterEmit => $this->activeSpan->addEvent('Data emitted'),
+            $event instanceof ApplicationError => $this->activeSpan->recordException($event->getThrowable()),
             $event instanceof ApplicationShutdown => $this->handleApplicationShutdown(),
         };
     }
 
     private function handleApplicationStartup(): void
     {
-        $this->activeSpan = $this->tracer->startSpan(
-            name: 'Start Application Process',
-            scoped: true
-        );
+        $this->activeSpan = $this->tracer->startSpan(name: __METHOD__, scoped: true);
     }
 
     private function handleAfterRequest(AfterRequest $event): void
@@ -65,12 +64,14 @@ final class WebAppInfoCollector
             sprintf('%s %s', $this->request->getMethod(), $this->request->getUri()->getPath())
         );
         $this->activeSpan->setAttributes([
-            'http.wrote_bytes' => $this->response->getBody()->getSize(),
+            'php.memory_peak_usage' => memory_get_peak_usage(),
+            'http.response_content_length' => $this->response->getBody()->getSize(),
             'http.user_ip' => $this->request->getServerParams()['REMOTE_ADDR'] ?? null,
             'http.user_agent' => $this->request->getHeaderLine('User-Agent'),
             'http.status_code' => $this->response->getStatusCode(),
             'http.scheme' => $this->request->getUri()->getScheme(),
             'http.route' => $this->request->getUri()->getPath(),
+            'http.request_id' => $this->response->getHeaderLine('X-Request-Id'),
             'http.method' => $this->request->getMethod(),
             'http.flavor' => $this->response->getProtocolVersion()
         ]);

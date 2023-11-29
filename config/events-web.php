@@ -44,5 +44,5 @@ return [
     ],
     ApplicationError::class => [
         [WebAppInfoCollector::class, 'collect'],
-    ],
+    ]
 ];
