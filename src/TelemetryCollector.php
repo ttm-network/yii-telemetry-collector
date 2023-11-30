@@ -40,6 +40,7 @@ final class TelemetryCollector
         }
 
         $this->tracer->endAllSpans();
+        $this->tracer->getContext()->resetContext();
         $this->active = false;
     }
 }
