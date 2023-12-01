@@ -51,13 +51,9 @@ final class WebAppInfoCollector
     private function handleBeforeRequest(ServerRequestInterface $request): void
     {
         $this->request = $request;
-        $context = $this->contextExtractor->extract($request->getHeaders())->current();
+        $context = $this->contextExtractor->extract($request->getHeaders());
 
-        if ($context !== []) {
-            $this->tracer->getContext()->setContext($context);
-        }
-
-        $this->activeSpan = $this->tracer->startSpan(name: __METHOD__, scoped: true);
+        $this->activeSpan = $this->tracer->startSpan(name: __METHOD__, scoped: true, context: $context);
     }
 
     private function handleAfterRequest(AfterRequest $event): void
