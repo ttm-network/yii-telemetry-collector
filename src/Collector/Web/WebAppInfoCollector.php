@@ -53,7 +53,7 @@ final class WebAppInfoCollector
         $this->request = $request;
         $context = $this->contextExtractor->extract($request->getHeaders())->current();
 
-        if ($context === []) {
+        if ($context !== []) {
             $this->tracer->getContext()->setContext($context);
         }
 
