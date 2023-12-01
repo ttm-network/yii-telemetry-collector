@@ -8,13 +8,13 @@ use Psr\Http\Message\ResponseInterface;
 use Psr\Http\Message\ServerRequestInterface;
 use Psr\Log\LoggerInterface;
 use TTM\Telemetry\Collector\Collector\CollectorTrait;
+use TTM\Telemetry\ContextExtractorInterface;
 use TTM\Telemetry\SpanInterface;
 use TTM\Telemetry\TracerInterface;
 use Yiisoft\ErrorHandler\Event\ApplicationError;
 use Yiisoft\Yii\Http\Event\AfterEmit;
 use Yiisoft\Yii\Http\Event\AfterRequest;
 use Yiisoft\Yii\Http\Event\ApplicationShutdown;
-use Yiisoft\Yii\Http\Event\ApplicationStartup;
 use Yiisoft\Yii\Http\Event\BeforeRequest;
 
 final class WebAppInfoCollector
@@ -27,6 +27,7 @@ final class WebAppInfoCollector
 
     public function __construct(
         private readonly TracerInterface $tracer,
+        private readonly ContextExtractorInterface $contextExtractor,
         private readonly LoggerInterface $logger
     ) {
     }
@@ -38,17 +39,24 @@ final class WebAppInfoCollector
         }
 
         match (true) {
-            $event instanceof ApplicationStartup => $this->handleApplicationStartup(),
-            $event instanceof BeforeRequest => $this->request = $event->getRequest(),
+            $event instanceof BeforeRequest => $this->handleBeforeRequest($event->getRequest()),
             $event instanceof AfterRequest => $this->handleAfterRequest($event),
             $event instanceof AfterEmit => $this->activeSpan->addEvent('Data emitted'),
             $event instanceof ApplicationError => $this->activeSpan->recordException($event->getThrowable()),
             $event instanceof ApplicationShutdown => $this->handleApplicationShutdown(),
+            default => false
         };
     }
 
-    private function handleApplicationStartup(): void
+    private function handleBeforeRequest(ServerRequestInterface $request): void
     {
+        $this->request = $request;
+        $context = $this->contextExtractor->extract($request->getHeaders())->current();
+
+        if ($context === []) {
+            $this->tracer->getContext()->setContext($context);
+        }
+
         $this->activeSpan = $this->tracer->startSpan(name: __METHOD__, scoped: true);
     }
 
