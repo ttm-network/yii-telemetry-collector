@@ -8,7 +8,7 @@ use Psr\Http\Message\ResponseInterface;
 use Psr\Http\Message\ServerRequestInterface;
 use Psr\Log\LoggerInterface;
 use TTM\Telemetry\Collector\Collector\CollectorTrait;
-use TTM\Telemetry\ContextExtractorInterface;
+use TTM\Telemetry\Context\ContextExtractorInterface;
 use TTM\Telemetry\SpanInterface;
 use TTM\Telemetry\TracerInterface;
 use Yiisoft\ErrorHandler\Event\ApplicationError;
