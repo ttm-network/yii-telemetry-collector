@@ -32,13 +32,13 @@ final class MiddlewareCollector
         if ($event instanceof BeforeMiddleware) {
             $span = $this->tracer->startSpan(
                 name: sprintf('middleware (%s)', $name),
-                scoped: true
             );
             $this->stack[] = [$span, ['memory' => memory_get_usage()]];
         } else {
             /** @var SpanInterface $span */
             [$span, $info] = array_pop($this->stack);
             $span->setAttribute('php.memory_usage', memory_get_usage() - $info['memory']);
+
             $this->tracer->endSpan($span);
         }
     }
